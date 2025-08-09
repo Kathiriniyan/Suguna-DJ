@@ -182,7 +182,7 @@ export default function FloatingMusicPlayer() {
         </div>
 
         {/* Audio */}
-        <audio ref={audioRef} src="/assets/audio/demo-mix.mp3" loop />
+        <audio ref={audioRef} src="/audio/demo-mix.mp3" loop />
       </div>
     </div>
   );
