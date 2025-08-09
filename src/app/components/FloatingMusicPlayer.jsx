@@ -22,7 +22,7 @@ export default function FloatingMusicPlayer() {
   useEffect(() => {
     let anim;
     function animate() {
-      setWave(Math.sin(Date.now() / 650) * 10); // up/down amplitude
+      setWave(Math.sin(Date.now() / 650) * 8); // smaller amplitude
       anim = requestAnimationFrame(animate);
     }
     animate();
@@ -34,26 +34,26 @@ export default function FloatingMusicPlayer() {
     const a = audioRef.current;
     if (!a) return;
     a.volume = volume;
-    function timeUpdate() {
-      setCurrent(a.currentTime);
-    }
-    function setMeta() {
-      setDuration(a.duration || 0);
-    }
+    const timeUpdate = () => setCurrent(a.currentTime);
+    const setMeta = () => setDuration(a.duration || 0);
     a.addEventListener("timeupdate", timeUpdate);
     a.addEventListener("loadedmetadata", setMeta);
     return () => {
       a.removeEventListener("timeupdate", timeUpdate);
       a.removeEventListener("loadedmetadata", setMeta);
     };
-  }, []);
+  }, [volume]);
 
   // Play/Pause logic
   function togglePlay() {
-    setPlaying((p) => !p);
-    if (audioRef.current) {
-      if (playing) audioRef.current.pause();
-      else audioRef.current.play();
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) {
+      a.play();
+      setPlaying(true);
+    } else {
+      a.pause();
+      setPlaying(false);
     }
   }
 
@@ -64,7 +64,7 @@ export default function FloatingMusicPlayer() {
     if (audioRef.current) audioRef.current.volume = value;
   }
 
-  // Seek bar logic (for progress, optional)
+  // Seek bar logic
   function handleSeek(e) {
     const value = parseFloat(e.target.value);
     if (audioRef.current) {
@@ -73,85 +73,90 @@ export default function FloatingMusicPlayer() {
     }
   }
 
+  const progress = duration ? Math.min(100, Math.max(0, (current / duration) * 100)) : 0;
+
   return (
     <div
-      className={`
-        fixed z-50
-        right-7 bottom-7
-        select-none
-        transition-transform duration-200
-        shadow-xl
-      `}
-      style={{
-        // Animate up and down, only one edge "waves"
-        transform: `translateY(${wave}px)`,
-      }}
+      className="fixed z-50 right-3 bottom-3 sm:right-5 sm:bottom-5 transition-transform duration-200 select-none"
+      style={{ transform: `translateY(${wave}px)` }}
     >
       <div
-        className="
-          relative flex items-center gap-4
-          px-7 py-5
+        className={`
+          relative flex items-center
+          gap-3 sm:gap-4
+          px-3 py-2.5 sm:px-6 sm:py-4
           rounded-3xl
-          bg-white/10
-          backdrop-blur-2xl
+          bg-white/10 backdrop-blur-2xl
           border border-cyan-400/40
           shadow-2xl
-          min-w-[350px] max-w-[92vw]
-        "
+          w-[86vw] max-w-[290px]    /* MUCH smaller on phones */
+          sm:w-auto sm:min-w-[350px] sm:max-w-[92vw]  /* same desktop size as before */
+        `}
         style={{
           boxShadow: "0 6px 38px 0 rgba(50,0,60,0.23)",
           borderRadius: "30px",
         }}
       >
-        {/* Top-right neon dot */}
-        <span className="absolute top-[-13px] right-[-13px] w-7 h-7 rounded-full bg-cyan-400 shadow-2xl border-4 border-[#111c] z-10"></span>
-        {/* Bottom-left pink dot */}
-        <span className="absolute bottom-[-11px] left-[-10px] w-4 h-4 rounded-full bg-pink-400 border-2 border-[#18101077] z-10"></span>
+        {/* Top-right neon dot (smaller on mobile) */}
+        <span className="absolute -top-2.5 -right-2.5 w-4 h-4 sm:w-7 sm:h-7 rounded-full bg-cyan-400 shadow-2xl border-2 sm:border-4 border-[#111c] z-10"></span>
+        {/* Bottom-left pink dot (smaller on mobile) */}
+        <span className="absolute -bottom-2 -left-2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full bg-pink-400 border border-[#18101077] sm:border-2 z-10"></span>
 
-        {/* Circle play icon (glowing) */}
+        {/* Play / Pause (smaller on mobile) */}
         <button
           onClick={togglePlay}
-          className="flex items-center justify-center w-14 h-14 rounded-full bg-cyan-300 shadow-lg hover:scale-105 active:scale-95 transition-transform ring-2 ring-cyan-400/40"
+          className="flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-cyan-300 shadow-lg hover:scale-105 active:scale-95 transition-transform ring-2 ring-cyan-400/40"
+          aria-label={playing ? "Pause" : "Play"}
         >
           {playing ? (
-            <FaPause size={32} className="text-black" />
+            <>
+              <FaPause size={20} className="sm:hidden text-black" />
+              <FaPause size={32} className="hidden sm:block text-black" />
+            </>
           ) : (
-            <FaPlay size={32} className="text-black ml-1" />
+            <>
+              <FaPlay size={20} className="sm:hidden text-black ml-0.5" />
+              <FaPlay size={32} className="hidden sm:block text-black ml-1" />
+            </>
           )}
         </button>
 
         {/* Song info */}
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-white text-lg leading-none">
+          <div className="font-bold text-white text-[13px] sm:text-lg leading-none truncate">
             DJ Suguna - Demo Mix
           </div>
-          <div className="flex items-center gap-2 mt-1 text-[#b3b0c0] text-xs font-semibold">
+          <div className="flex items-center gap-1 sm:gap-2 mt-1 text-[#b3b0c0] text-[10px] sm:text-xs font-semibold">
             <span>{formatTime(current)}</span>
             <span className="opacity-70">/</span>
             <span>{formatTime(duration)}</span>
           </div>
-          {/* Progress bar */}
+          {/* Progress bar (thinner on mobile) */}
           <input
             type="range"
             min={0}
-            max={duration}
+            max={duration || 0}
             value={current}
             step={0.05}
             onChange={handleSeek}
-            className="w-full mt-1 h-1 accent-pink-400 bg-transparent"
+            className="w-full mt-1 h-[6px] sm:h-1 bg-transparent"
             style={{
-              background:
-                "linear-gradient(90deg, #03eaff 0%, #ff45b7 100%)",
-              accentColor: "#ff45b7",
-              height: 4,
-              borderRadius: 2,
+              background: `
+                linear-gradient(90deg, #03eaff 0%, #ff45b7 ${progress}%),
+                linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.15) 100%)
+              `,
+              backgroundRepeat: "no-repeat",
+              backgroundSize: `${progress}% 100%, 100% 100%`,
+              borderRadius: 3,
               outline: "none",
+              WebkitAppearance: "none",
+              appearance: "none",
             }}
           />
         </div>
 
-        {/* Volume control */}
-        <div className="flex items-center gap-1 ml-2 min-w-[90px]">
+        {/* Volume control (hide on mobile, unchanged on desktop) */}
+        <div className="hidden sm:flex items-center gap-2 ml-2 min-w-[90px]">
           <FaVolumeUp className="text-white/80" size={18} />
           <input
             type="range"
@@ -160,26 +165,24 @@ export default function FloatingMusicPlayer() {
             step={0.01}
             value={volume}
             onChange={handleVolume}
-            className="w-[70px] accent-cyan-400 rounded-full h-1 bg-pink-400"
+            className="w-[90px] h-1 bg-transparent"
             style={{
-              background:
-                "linear-gradient(90deg, #00eaff 0%, #ff45b7 100%)",
-              accentColor: "#00eaff",
-              height: 5,
+              background: `
+                linear-gradient(90deg, #00eaff 0%, #ff45b7 ${volume * 100}%),
+                linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.15) 100%)
+              `,
+              backgroundRepeat: "no-repeat",
+              backgroundSize: `${volume * 100}% 100%, 100% 100%`,
               borderRadius: 8,
               outline: "none",
+              WebkitAppearance: "none",
+              appearance: "none",
             }}
           />
         </div>
 
         {/* Audio */}
-        <audio
-          ref={audioRef}
-          src="/assets/audio/demo-mix.mp3"
-          loop
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-        />
+        <audio ref={audioRef} src="/assets/audio/demo-mix.mp3" loop />
       </div>
     </div>
   );
