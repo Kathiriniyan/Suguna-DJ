@@ -27,60 +27,98 @@ export default function ContactSection() {
   const [didFlicker, setDidFlicker] = useState(false);
   const [hovering, setHovering] = useState(false);
 
+  // Reversible GSAP animations (same pattern as AboutSection)
   useEffect(() => {
-    if (typeof window === "undefined" || !sectionRef.current) return;
+    if (!sectionRef.current) return;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const inOut = (el, start = "top -80%") => {
-      gsap.set(el, { y: 24, opacity: 0, rotateX: 6 });
-      ScrollTrigger.create({
-        trigger: el,
-        start,
-        onEnter: () =>
-          gsap.to(el, {
-            y: 0,
-            opacity: 1,
-            rotateX: 0,
-            duration: reduce ? 0 : 0.9,
-            ease: "power3.out",
-          }),
-        onLeave: () =>
-          gsap.to(el, {
-            y: 16,
-            opacity: 0,
-            rotateX: 4,
-            duration: reduce ? 0 : 0.35,
-            ease: "power2.in",
-          }),
-        onEnterBack: () =>
-          gsap.to(el, {
-            y: 0,
-            opacity: 1,
-            rotateX: 0,
-            duration: reduce ? 0 : 0.8,
-            ease: "power3.out",
-          }),
-        onLeaveBack: () =>
-          gsap.to(el, {
-            y: -16,
-            opacity: 0,
-            rotateX: -4,
-            duration: reduce ? 0 : 0.3,
-            ease: "power2.in",
-          }),
-      });
-    };
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
     const ctx = gsap.context(() => {
-      inOut(sectionRef.current.querySelector(".contact-title"), "top -75%");
-      inOut(leftRef.current);
-      inOut(rightRef.current);
-      inOut(followRef.current, "top -85%");
-      inOut(guaranteeRef.current, "top -85%");
+      // Helper: element-scoped trigger, reversible play↔reverse
+      const base = (
+        el,
+        fromVars,
+        toVars,
+        trigger = el,
+        start = "top 80%",
+        end = "bottom 65%"
+      ) => {
+        if (!el) return;
+        gsap.fromTo(
+          el,
+          fromVars,
+          {
+            ...toVars,
+            duration: reduce ? 0 : toVars.duration ?? 0.9,
+            immediateRender: false,
+            overwrite: "auto",
+            scrollTrigger: {
+              trigger,
+              start,
+              end,
+              toggleActions: "play reverse play reverse",
+              invalidateOnRefresh: true,
+            },
+          }
+        );
+      };
+
+      // Title (fade up)
+      const titleEl = sectionRef.current.querySelector(".contact-title");
+      if (titleEl) {
+        base(
+          titleEl,
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, ease: "power3.out", duration: 0.9 },
+          sectionRef.current,
+          "top 75%",
+          "bottom 65%"
+        );
+      }
+
+      // Left card (slide from left)
+      base(
+        leftRef.current,
+        { x: -40, opacity: 0 },
+        { x: 0, opacity: 1, ease: "power3.out", duration: 0.9 }
+      );
+
+      // Right card (slide from right)
+      base(
+        rightRef.current,
+        { x: 40, opacity: 0 },
+        { x: 0, opacity: 1, ease: "power3.out", duration: 0.9 }
+      );
+
+      // Bottom row (rise in)
+      base(
+        followRef.current,
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, ease: "power3.out", duration: 0.8 },
+        followRef.current,
+        "top 85%",
+        "bottom 60%"
+      );
+      base(
+        guaranteeRef.current,
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, ease: "power3.out", duration: 0.8, delay: 0.05 },
+        guaranteeRef.current,
+        "top 85%",
+        "bottom 60%"
+      );
     }, sectionRef);
 
     return () => ctx.revert();
+  }, []);
+
+  // Refresh triggers when assets load (prevents jumpy/hiding)
+  useEffect(() => {
+    const onLoad = () => ScrollTrigger.refresh();
+    window.addEventListener("load", onLoad);
+    return () => window.removeEventListener("load", onLoad);
   }, []);
 
   function onEnterBtn() {
@@ -211,9 +249,7 @@ export default function ContactSection() {
               <div className="md:col-span-2">
                 <button
                   type="submit"
-                  onMouseEnter={() => {
-                    onEnterBtn();
-                  }}
+                  onMouseEnter={onEnterBtn}
                   onMouseLeave={() => setHovering(false)}
                   className={`relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-extrabold text-black transition
                     ring-1 ring-[#ffd70066]
@@ -257,7 +293,7 @@ export default function ContactSection() {
           >
             <h4 className="text-lg font-extrabold text-white">Follow the Journey</h4>
             <p className="mt-2 text-white/70">
-              Stay updated with our latest events, behind‑the‑scenes content, and music mixes.
+              Stay updated with our latest events, behind-the-scenes content, and music mixes.
             </p>
             <div className="mt-4 flex items-center gap-3">
               <Social icon={<FaInstagram />} href="#" />
@@ -282,7 +318,7 @@ export default function ContactSection() {
         </div>
       </div>
 
-      {/* local styles: one‑time flicker for gold button */}
+      {/* local styles: one-time flicker for gold button */}
       <style jsx>{`
         .btn-flicker-once {
           animation: btnFlicker 0.9s ease-out 1;
