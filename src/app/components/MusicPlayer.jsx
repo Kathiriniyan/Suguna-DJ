@@ -1,3 +1,4 @@
+"use client";
 import { useState, useRef } from "react";
 import { FaPlay, FaPause, FaWaveSquare } from "react-icons/fa";
 
